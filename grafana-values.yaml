@@ -1,0 +1,39 @@
+env:
+  GF_AUTH_ANONYMOUS_ENABLED: true
+  GF_AUTH_ANONYMOUS_ORG_ROLE: "Admin"
+  GF_AUTH_DISABLE_LOGIN_FORM: true
+
+grafana.ini:
+  server:
+    domain: monitoring.openfaas.local
+    root_url: "%(protocol)s://%(domain)s/grafana"
+    serve_from_sub_path: true
+
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+
+    datasources:
+      - name: Tempo
+        type: tempo
+        access: proxy
+        orgId: 1
+        url: http://tempo:3100
+        isDefault: false
+        version: 1
+        editable: false
+        uid: tempo
+      - name: Loki
+        type: loki
+        access: proxy
+        url: http://loki:3100
+        isDefault: true
+        version: 1
+        editable: false
+        uid: loki
+        jsonData:
+          derivedFields:
+            - datasourceUid: tempo
+              matcherRegex: (?:traceID|trace_id|traceId|traceid)(?:=|\s)(\w+)
+              url: "$${__value.raw}"
+              name: TraceID

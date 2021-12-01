@@ -1,0 +1,21 @@
+controller:
+  config:
+    enable-opentracing: "true"
+    jaeger-collector-host: tempo.default.svc.cluster.local
+    log-format-upstream: remote_addr=$remote_addr use=$remote_user ts=$time_local request="$request" status=$status body_bytes=$body_bytes_sent referer="$http_referer" user_agent="$http_user_agent" request_length=$request_length duration=$request_time upstream=$proxy_upstream_name upstream_addr=$upstream_addr upstream_resp_length=$upstream_response_length upstream_duration=$upstream_response_time upstream_status=$upstream_status traceId=$opentracing_context_uber_trace_id
+  hostPort:
+    enabled: "true"
+  service:
+    type: NodePort
+    service:
+      nodePorts:
+        http: 30080
+
+  publishService:
+    enabled: "false"
+  extraArgs:
+    publish-status-address: localhost
+  updateStrategy:
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1

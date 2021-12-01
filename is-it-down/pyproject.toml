@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "is-it-down"
+version = "0.1.0"
+description = ""
+authors = ["Lucas Roesler <roesler.lucas@gmail.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+opentelemetry-api = "^1.7.1"
+opentelemetry-sdk = "^1.7.1"
+opentelemetry-exporter-otlp = "^1.7.1"
+opentelemetry-instrumentation-flask = "^0.26b1"
+opentelemetry-instrumentation-requests = "^0.26b1"
+requests = "^2.26.0"
+Flask = "^2.0.2"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
