@@ -390,3 +390,15 @@ This example will use the Python 3 Flask template and OpenTelemetry.
    ```
 
 Now, you can go to the Loki logs to find one of the function traces [{faas_function="is-it-down"}](http://monitoring.openfaas.local/grafana/explore?orgId=1&left=%5B%22now-15m%22,%22now%22,%22Loki%22,%7B%22refId%22:%22A%22,%22expr%22:%22%7Bfaas_function%3D%5C%22is-it-down%5C%22%7D%22%7D%5D), the trace id will be in the log. Using this, we can jump to the corresponding trace to see the timing.
+
+![The trace of a successful function call](images/of-function-traced.png)
+
+A failed/errored request will look like this
+
+![The trace of a failed request](images/of-function-failed-trace.png)
+
+## Wrapping up
+
+You will notice that we didn't need to do any configuration to the OpenFaaS components. The main reason for this, is that tracing is propagated via HTTP headers, which are safely preserved during function requests (even during async function calls). To use tracing, you only need to ensure that your function template is tracing aware and then configure the env variables.
+
+To bring this to the default templates, we need to develop a pattern similar to my `initialize(app)` hook. For some languages, like Python, this is pretty straightforward. Let us know if you have suggestions for the other language templates.
