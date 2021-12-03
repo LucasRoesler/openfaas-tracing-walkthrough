@@ -120,6 +120,7 @@ Now, we can install Tempo and then Grafana
 
 ```sh
 helm upgrade --install tempo grafana/tempo
+helm upgrade --install loki grafana/loki-stack
 helm upgrade -f grafana-values.yaml --install grafana grafana/grafana
 ```
 
@@ -246,11 +247,15 @@ This example will use the Python 3 Flask template and OpenTelemetry.
 
 ### Setup
 
-1. Pull the function template using
+1. For this demo I created (and included in this repo) a fork of the python3-flask template. The main addition to the template is this
 
-   ```sh
-   faas-cli template store pull python3-flask
+   ```python
+   if hasattr(handler, "initialize"):
+       app = handler.initialize(app)
    ```
+
+   which allows us to define an initialization hook inside our handler, so that we can setup the flask tracing middleware.
+   If you are writing your own templates, I would recommend including your own logging and tracing configuration in the base template.
 
 2. Initialize the app `is-it-down`
 
@@ -270,4 +275,118 @@ This example will use the Python 3 Flask template and OpenTelemetry.
    requests==2.26.0
    ```
 
-4. Now the implementation
+4. Now the implementation. The most important (and simplest) part is our handler
+
+   ```py
+   def handle(req: Union[str, QueryArgs]):
+       """handle a request to the function
+       Args:
+           req (str): request body
+       """
+       with tracer.start_as_current_span("handle") as span:
+           url = ""
+           if isinstance(req, str):
+               url = req
+           else:
+               url = req.get("url", "")
+
+           url = url.strip()
+
+           span.set_attribute("url", url)
+
+           if not valid_uri(url):
+               msg = f'invalid or empty url: "{url}"'
+               span.set_attribute("err.msg", msg)
+               span.set_status(StatusCode.ERROR)
+               return msg, 409
+
+           try:
+               r = requests.get(url)
+           except requests.exceptions.ConnectionError:
+               span.set_attribute("response", "down")
+               return "down"
+
+           if r.status_code > 399:
+               span.set_attribute("response", "down")
+               return "down"
+
+           span.set_attribute("response", "up")
+           return "up"
+   ```
+
+   To add tracing to our function, we just need to use the `start_as_current_span` context handler:
+
+   ```py
+   with tracer.start_as_current_span("handle") as span:
+   ```
+
+   creates a new tracing span, named `handle`. Because we are using the context handler, it will automatically close the span when we leave the `with` block.
+
+   This is a pattern that will be familiar the from Python docs for the `open` method used to open (and then automatically close) files, [see here](https://docs.python.org/3/tutorial/inputoutput.html#reading-and-writing-files).
+
+   Fortunately, if tracing is disable or otherwise non-configured OpenTelemetry has a default no-op tracer. Meaning we can safely add this code to our function without worrying about breaking anything.
+
+   Of course we _do_ want to generate real traces but to do that we need to configure a tracing provider. For our function, that looks like this. Many of these methods can accept various options, but in many cases the OpenTelemetry objects have defaults or can read from environment varialbes, so I have opted to allow the OpenTelemetry SDK to automatically configure itself from the environment. See [the OpenTelemetry docs](https://opentelemetry-python.readthedocs.io/en/latest/sdk/environment_variables.html#opentelemetry-sdk-environment-variables) for all of the possible options.
+
+   ```py
+   resource = Resource(attributes={SERVICE_NAME: NAME})
+   provider = TracerProvider(resource=resource)
+
+   if os.getenv("TRACING", "false").lower() in TRUTHY:
+       # configure via the OTEL_EXPORTER_OTLP_* env variables
+       # see https://opentelemetry-python.readthedocs.io/en/latest/sdk/environment_variables.html#opentelemetry-sdk-environment-variables
+       exporter = OTLPSpanExporter()
+       provider.add_span_processor(BatchSpanProcessor(exporter))
+
+   trace.set_tracer_provider(provider)
+   tracer = trace.get_tracer(__name__)
+
+
+   def initialize(app: Flask) -> Flask:
+       FlaskInstrumentor().instrument_app(app)
+       RequestsInstrumentor().instrument()
+
+       app.logger.setLevel(LOG_LEVEL)
+
+       default_handler.setFormatter(SpanFormatter(LOG_FMT))
+
+       # hook to log requests
+       def log_request(response):
+           app.logger.info(
+               'addr="%s" method=%s scheme=%s path="%s" status=%s',
+               request.remote_addr,
+               request.method,
+               request.scheme,
+               request.full_path,
+               response.status_code,
+           )
+           return response
+
+       app.after_request(log_request)
+
+       return app
+   ```
+
+   see the full source code in the [repo](https://github.com/LucasRoesler/openfaas-tracing-walkthrough)
+
+5. Try the function. If you are running this locally or with your own custom function, then we need to build and load the function into our cluster
+
+   ```sh
+   faas-cli build
+   kind --name of-tracing load docker-image ghcr.io/lucasroesler/is-it-down:latest
+   ```
+
+   Now we can deploy it
+
+   ```sh
+   faas-cli deploy
+   ```
+
+   To invoke we can use
+
+   ```sh
+   $ echo "http://google.com" | faas-cli invoke is-it-down
+   up
+   ```
+
+Now, you can go to the Loki logs to find one of the function traces [{faas_function="is-it-down"}](http://monitoring.openfaas.local/grafana/explore?orgId=1&left=%5B%22now-15m%22,%22now%22,%22Loki%22,%7B%22refId%22:%22A%22,%22expr%22:%22%7Bfaas_function%3D%5C%22is-it-down%5C%22%7D%22%7D%5D), the trace id will be in the log. Using this, we can jump to the corresponding trace to see the timing.

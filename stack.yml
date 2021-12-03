@@ -6,5 +6,7 @@ functions:
   is-it-down:
     lang: python3-flask
     handler: ./is-it-down
-    image: is-it-down:latest
-
+    image: ghcr.io/lucasroesler/is-it-down:latest
+    environment:
+      TRACING: "true"
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://tempo.default.svc.cluster.local:4317
