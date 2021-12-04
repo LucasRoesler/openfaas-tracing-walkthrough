@@ -267,6 +267,17 @@ opentelemetry-util-http = "0.26b1"
 test = ["opentelemetry-test-utils (==0.26b1)"]
 
 [[package]]
+name = "opentelemetry-propagator-jaeger"
+version = "1.7.1"
+description = "OpenTelemetry Jaeger Propagator"
+category = "main"
+optional = false
+python-versions = ">=3.6"
+
+[package.dependencies]
+opentelemetry-api = ">=1.3,<2.0"
+
+[[package]]
 name = "opentelemetry-proto"
 version = "1.7.1"
 description = "OpenTelemetry Python Proto"
@@ -374,7 +385,7 @@ python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,>=2.7"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "fde88e379d850118f6347e969da1f0ca3355eedc2a936bf192dfe90f34367996"
+content-hash = "b5639eafa09608924af7972b334e266a73eee08704d1f0b41bc16a4cf0864bf9"
 
 [metadata.files]
 backoff = [
@@ -569,6 +580,10 @@ opentelemetry-instrumentation-requests = [
 opentelemetry-instrumentation-wsgi = [
     {file = "opentelemetry-instrumentation-wsgi-0.26b1.tar.gz", hash = "sha256:43ab3d78487f82a8a0f9c2be3d21b5920621712027e3fea756ba05039a6a3521"},
     {file = "opentelemetry_instrumentation_wsgi-0.26b1-py3-none-any.whl", hash = "sha256:19d2fd538e15b16e985946074631cd6853d67a46f8304bb5da2ac3163c5803c9"},
+]
+opentelemetry-propagator-jaeger = [
+    {file = "opentelemetry-propagator-jaeger-1.7.1.tar.gz", hash = "sha256:61fa4d6c469967d59e05ce3f817f0e2a19287ecdbdc065bf21b02397ee7ca331"},
+    {file = "opentelemetry_propagator_jaeger-1.7.1-py3-none-any.whl", hash = "sha256:8a9a461166e0b4f7060a10bdbcc2d4c19c1b1a133c0679f6fd8c1474879b8f29"},
 ]
 opentelemetry-proto = [
     {file = "opentelemetry-proto-1.7.1.tar.gz", hash = "sha256:fadb617947e2567740f8e92ae8f4564c5d8bfb2816dd34b19ca3efcf5eaa0806"},

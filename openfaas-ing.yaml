@@ -1,0 +1,19 @@
+# grafana-ing.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: openfaas
+  namespace: openfaas
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: gateway.openfaas.local
+      http:
+        paths:
+          - backend:
+              service:
+                name: gateway
+                port:
+                  number: 8080
+            path: /
+            pathType: ImplementationSpecific

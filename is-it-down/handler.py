@@ -25,7 +25,7 @@ LOG_FMT = 'time="%(asctime)s" service=%(name)s level=%(levelname)s %(message)s t
 
 # allow overridding the service name
 NAME = os.getenv("SERVICE_NAME", "is-it-down")
-LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 
 
 # QueryArgs is the type used for flask query parameters

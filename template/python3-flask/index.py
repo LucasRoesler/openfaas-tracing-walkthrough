@@ -33,6 +33,8 @@ def fix_transfer_encoding():
 @app.route("/<path:path>", methods=["POST", "GET"])
 def main_route(path):
 
+    app.logger.debug(str(request.headers).replace("\r\n", " ").replace(": ", "="))
+
     if request.method == "GET":
         return handler.handle(request.args)
 

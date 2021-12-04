@@ -10,3 +10,5 @@ functions:
     environment:
       TRACING: "true"
       OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://tempo.default.svc.cluster.local:4317
+      OTEL_PROPAGATORS: tracecontext,baggage,jaeger
+      LOG_LEVEL: "INFO"

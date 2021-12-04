@@ -216,6 +216,7 @@ Now that we are prepared to monitor our applications, let's install OpenFaaS and
 ```sh
 arkade install openfaas -a=false --function-pull-policy=IfNotPresent --set ingress.enabled='true'
 arkade install openfaas-loki
+kubectl apply -f openfaas-ing.yaml
 ```
 
 Because we exposed port 8080 when we setup the Cluster and disabled auth when we installed OpenFaaS, we can start using faas-cli right away
@@ -271,9 +272,12 @@ This example will use the Python 3 Flask template and OpenTelemetry.
    opentelemetry-exporter-otlp==1.7.1
    opentelemetry-instrumentation-flask==0.26b1
    opentelemetry-instrumentation-requests==0.26b1
+   opentelemetry-propagator-jaeger==1.7.1
    opentelemetry-sdk==1.7.1
    requests==2.26.0
    ```
+
+   Note that `opentelemetry-propagator-jaeger` enables capability with applications that are using Jaeger OpenTracing, like our NGINX load balancer.
 
 4. Now the implementation. The most important (and simplest) part is our handler
 
@@ -369,7 +373,20 @@ This example will use the Python 3 Flask template and OpenTelemetry.
 
    see the full source code in the [repo](https://github.com/LucasRoesler/openfaas-tracing-walkthrough)
 
-5. Try the function. If you are running this locally or with your own custom function, then we need to build and load the function into our cluster
+5. Finally, to configure the tracing, we need to set a couple environment variables for our function, specifically, we need these three variables
+
+   ```yaml
+   environment:
+     TRACING: "true"
+     OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://tempo.default.svc.cluster.local:4317
+     OTEL_PROPAGATORS: tracecontext,baggage,jaeger
+   ```
+
+   The variable `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` tells the OpenTelemetry exporter where to send traces, in our deployment this is Tempo. Tempo provides support for ingesting both OpenTracing _and_ OpenTelemetry, on port 6831 and 4317 respectively. We are using the OpenTelemetry exporter, so we are using `4317`.
+
+   Additionally, because NGINX is creating Jaeger compatible traces, we need to configure OpenTelemetry tracing propagator to support Jaeger in addition to the default OpenTelemetry trace ids. We do this by setting the `OTEL_PROPAGATORS` variables to include `jaeger`.
+
+6. Try the function. If you are running this locally or with your own custom function, then we need to build and load the function into our cluster
 
    ```sh
    faas-cli build
@@ -385,8 +402,10 @@ This example will use the Python 3 Flask template and OpenTelemetry.
    To invoke we can use
 
    ```sh
-   $ echo "http://google.com" | faas-cli invoke is-it-down
+   $ curl "http://gateway.openfaas.local/function/is-it-down?url=http://google.com"
    up
+   $ curl "http://gateway.openfaas.local/function/is-it-down?url=http://google-foo.com"
+   down
    ```
 
 Now, you can go to the Loki logs to find one of the function traces [{faas_function="is-it-down"}](http://monitoring.openfaas.local/grafana/explore?orgId=1&left=%5B%22now-15m%22,%22now%22,%22Loki%22,%7B%22refId%22:%22A%22,%22expr%22:%22%7Bfaas_function%3D%5C%22is-it-down%5C%22%7D%22%7D%5D), the trace id will be in the log. Using this, we can jump to the corresponding trace to see the timing.

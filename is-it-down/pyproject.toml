@@ -13,6 +13,7 @@ opentelemetry-instrumentation-flask = "^0.26b1"
 opentelemetry-instrumentation-requests = "^0.26b1"
 requests = "^2.26.0"
 Flask = "^2.0.2"
+opentelemetry-propagator-jaeger = "^1.7.1"
 
 [tool.poetry.dev-dependencies]
 
